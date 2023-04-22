@@ -15,7 +15,6 @@ void generate_random(double *input, size_t size)
 
 double serial_sum(double *x, size_t size)
 {
-  omp_set_num_threads(8);
   double sum_val = 0.0;
 
   for (size_t i = 0; i < size; i++) {
