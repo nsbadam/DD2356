@@ -1,1 +1,52 @@
-//with removal of false sharing with padding
+File Edit Options Buffers Tools C Help                                          
+#include "stdlib.h"
+#include "stdio.h"
+#include "omp.h"
+#define MAX_THREADS 32
+#define SIZE 100000000
+double input[SIZE];
+
+void generate_random(double *input, size_t size)
+{
+  for (size_t i = 0; i < size; i++) {
+    input[i] = rand() / (double)(RAND_MAX);
+  }
+}
+
+double serial_sum(double *x, size_t size)
+{
+  const int CACHE_LINE_SIZE = 64;
+  double local_sum[MAX_THREADS][CACHE_LINE_SIZE/sizeof(double)];
+  double total = 0.0;
+#pragma omp parallel
+  {
+    int id = omp_get_thread_num();
+    double local = 0.0;
+#pragma omp for
+    for (size_t i = 0; i < size; i++) {
+      local += x[i];
+    }
+
+    for (int i = 0; i < CACHE_LINE_SIZE/sizeof(double); i++) {
+      local_sum[id][i] = local;
+    }
+  }
+
+  for (int i = 0; i < omp_get_num_threads(); i++) {
+    for (int j = 0; j < CACHE_LINE_SIZE/sizeof(double); j++) {
+      total += local_sum[i][j];
+    }
+  }
+  return total;
+}
+
+int main(int argc, char *argv[])
+{
+  double sum;
+  double start_time = omp_get_wtime();
+  generate_random(input, SIZE);
+  sum = serial_sum(input, SIZE);
+  double run_time = omp_get_wtime() - start_time;
+  printf("%f \n", run_time);
+  return 0;
+}
